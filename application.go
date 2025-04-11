@@ -12,26 +12,57 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-type Application struct {
-	ctx         context.Context
-	cancel      func()
-	stopTimeout time.Duration
-	signals     []os.Signal
+type Option func(app *Application)
 
-	servers []Server
+func WithContext(ctx context.Context) Option {
+	return func(app *Application) {
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		app.mainCtx = ctx
+	}
 }
 
-func New(servers ...Server) *Application {
-	ctx, cancel := context.WithCancel(context.Background())
+func WithServers(servers ...Server) Option {
+	return func(app *Application) {
+		if len(servers) > 0 {
+			app.servers = append(app.servers, servers...)
+		}
+	}
+}
 
+func WithStopTimeout(timeout time.Duration) Option {
+	return func(app *Application) {
+		app.stopTimeout = timeout
+	}
+}
+
+type Application struct {
+	signals []os.Signal
+
+	mainCtx     context.Context
+	stopTimeout time.Duration
+	servers     []Server
+
+	ctx    context.Context
+	cancel func()
+}
+
+func New(opts ...Option) *Application {
 	var app = &Application{}
+	app.signals = []os.Signal{syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT}
+	app.mainCtx = context.Background()
+	app.stopTimeout = 10 * time.Second
+
+	for _, opt := range opts {
+		if opt != nil {
+			opt(app)
+		}
+	}
+
+	ctx, cancel := context.WithCancel(app.mainCtx)
 	app.ctx = ctx
 	app.cancel = cancel
-	app.stopTimeout = 10 * time.Second
-	app.signals = []os.Signal{syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT}
-
-	app.servers = servers
-
 	return app
 }
 
@@ -43,7 +74,7 @@ func (app *Application) Run() (err error) {
 		var nServer = server
 		group.Go(func() error {
 			<-ctx.Done()
-			stopCtx, cancel := context.WithTimeout(context.Background(), app.stopTimeout)
+			stopCtx, cancel := context.WithTimeout(app.mainCtx, app.stopTimeout)
 			defer cancel()
 			return nServer.Stop(stopCtx)
 		})
