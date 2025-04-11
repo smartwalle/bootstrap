@@ -18,10 +18,10 @@ type Application struct {
 	stopTimeout time.Duration
 	signals     []os.Signal
 
-	services []Service
+	server []Server
 }
 
-func New(servcies ...Service) *Application {
+func New(servers ...Server) *Application {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	var app = &Application{}
@@ -30,7 +30,7 @@ func New(servcies ...Service) *Application {
 	app.stopTimeout = 10 * time.Second
 	app.signals = []os.Signal{syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT}
 
-	app.services = servcies
+	app.server = servers
 
 	return app
 }
@@ -39,18 +39,18 @@ func (app *Application) Run() (err error) {
 	var group, ctx = errgroup.WithContext(app.ctx)
 	var wg = sync.WaitGroup{}
 
-	for _, service := range app.services {
-		var nService = service
+	for _, server := range app.server {
+		var nServer = server
 		group.Go(func() error {
 			<-ctx.Done()
 			stopCtx, cancel := context.WithTimeout(app.ctx, app.stopTimeout)
 			defer cancel()
-			return nService.Stop(stopCtx)
+			return nServer.Stop(stopCtx)
 		})
 		wg.Add(1)
 		group.Go(func() error {
 			wg.Done()
-			return nService.Start(app.ctx)
+			return nServer.Start(app.ctx)
 		})
 	}
 
