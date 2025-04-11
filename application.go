@@ -19,7 +19,7 @@ func WithContext(ctx context.Context) Option {
 		if ctx == nil {
 			ctx = context.Background()
 		}
-		app.mainCtx = ctx
+		app.ctx = ctx
 	}
 }
 
@@ -38,20 +38,18 @@ func WithStopTimeout(timeout time.Duration) Option {
 }
 
 type Application struct {
-	signals []os.Signal
-
-	mainCtx     context.Context
-	stopTimeout time.Duration
-	servers     []Server
-
 	ctx    context.Context
 	cancel func()
+
+	signals     []os.Signal
+	stopTimeout time.Duration
+	servers     []Server
 }
 
 func New(opts ...Option) *Application {
 	var app = &Application{}
+	app.ctx = context.Background()
 	app.signals = []os.Signal{syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT}
-	app.mainCtx = context.Background()
 	app.stopTimeout = 10 * time.Second
 
 	for _, opt := range opts {
@@ -60,7 +58,7 @@ func New(opts ...Option) *Application {
 		}
 	}
 
-	ctx, cancel := context.WithCancel(app.mainCtx)
+	ctx, cancel := context.WithCancel(app.ctx)
 	app.ctx = ctx
 	app.cancel = cancel
 	return app
@@ -74,7 +72,7 @@ func (app *Application) Run() (err error) {
 		var nServer = server
 		group.Go(func() error {
 			<-ctx.Done()
-			stopCtx, cancel := context.WithTimeout(app.mainCtx, app.stopTimeout)
+			stopCtx, cancel := context.WithTimeout(context.WithoutCancel(app.ctx), app.stopTimeout)
 			defer cancel()
 			return nServer.Stop(stopCtx)
 		})
