@@ -7,21 +7,21 @@ import (
 )
 
 func main() {
-	var app = bootstrap.New(&Service{id: "1"}, &Service{id: "2"}, &Service{id: "3"})
+	var app = bootstrap.New(bootstrap.WithServers(&Server{id: "1"}, &Server{id: "2"}, &Server{id: "3"}))
 
 	fmt.Println(app.Run())
 }
 
-type Service struct {
+type Server struct {
 	id string
 }
 
-func (s *Service) Start(ctx context.Context) error {
+func (s *Server) Start(ctx context.Context) error {
 	fmt.Printf("%s  start \n", s.id)
 	return nil
 }
 
-func (s *Service) Stop(ctx context.Context) error {
+func (s *Server) Stop(ctx context.Context) error {
 	fmt.Printf("%s  stop \n", s.id)
 	return nil
 }
