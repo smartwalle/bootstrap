@@ -37,8 +37,10 @@ func (s *Server) Start(ctx context.Context) error {
 		listener = tls.NewListener(listener, s.TLSConfig)
 	}
 
-	s.BaseContext = func(listener net.Listener) context.Context {
-		return ctx
+	if s.BaseContext == nil {
+		s.BaseContext = func(listener net.Listener) context.Context {
+			return ctx
+		}
 	}
 
 	if err = s.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
