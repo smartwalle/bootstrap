@@ -18,7 +18,7 @@ type Application struct {
 	stopTimeout time.Duration
 	signals     []os.Signal
 
-	server []Server
+	servers []Server
 }
 
 func New(servers ...Server) *Application {
@@ -30,7 +30,7 @@ func New(servers ...Server) *Application {
 	app.stopTimeout = 10 * time.Second
 	app.signals = []os.Signal{syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT}
 
-	app.server = servers
+	app.servers = servers
 
 	return app
 }
@@ -39,7 +39,7 @@ func (app *Application) Run() (err error) {
 	var group, ctx = errgroup.WithContext(app.ctx)
 	var wg = sync.WaitGroup{}
 
-	for _, server := range app.server {
+	for _, server := range app.servers {
 		var nServer = server
 		group.Go(func() error {
 			<-ctx.Done()
