@@ -43,7 +43,7 @@ func (app *Application) Run() (err error) {
 		var nServer = server
 		group.Go(func() error {
 			<-ctx.Done()
-			stopCtx, cancel := context.WithTimeout(app.ctx, app.stopTimeout)
+			stopCtx, cancel := context.WithTimeout(context.Background(), app.stopTimeout)
 			defer cancel()
 			return nServer.Stop(stopCtx)
 		})
