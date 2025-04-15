@@ -11,7 +11,7 @@ import (
 func main() {
 	var mux = http.NewServeMux()
 	mux.HandleFunc("/hello", func(writer http.ResponseWriter, request *http.Request) {
-		writer.Write([]byte("Hello, World!"))
+		nhttp.NewResponse(1, "hello").Write(writer)
 	})
 
 	var httpServer = nhttp.NewServer("127.0.0.1:9090", mux)
