@@ -127,7 +127,7 @@ func (app *Application) Run() (err error) {
 
 func (app *Application) Stop() (err error) {
 	if !app.state.CompareAndSwap(kStateRunning, kStateFinished) {
-		return
+		return nil
 	}
 
 	if app.cancel != nil {
