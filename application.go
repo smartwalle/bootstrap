@@ -41,7 +41,6 @@ type Application struct {
 	ctx    context.Context
 	cancel func()
 
-	signals     []os.Signal
 	stopTimeout time.Duration
 	servers     []Server
 }
@@ -49,7 +48,6 @@ type Application struct {
 func New(opts ...Option) *Application {
 	var app = &Application{}
 	app.ctx = context.Background()
-	app.signals = []os.Signal{syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT}
 	app.stopTimeout = 10 * time.Second
 
 	for _, opt := range opts {
@@ -85,14 +83,14 @@ func (app *Application) Run() (err error) {
 
 	wg.Wait()
 
-	var c = make(chan os.Signal, 1)
-	signal.Notify(c, app.signals...)
+	var sigs = make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT)
 
 	group.Go(func() error {
 		select {
 		case <-ctx.Done():
 			return nil
-		case <-c:
+		case <-sigs:
 			return app.Stop()
 		}
 	})
