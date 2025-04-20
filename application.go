@@ -39,9 +39,9 @@ func WithStopTimeout(timeout time.Duration) Option {
 }
 
 const (
-	kStateIdle     = 0
-	kStateRunning  = 1
-	kStateFinished = 2
+	kStateIdle     = 0 // 未运行
+	kStateRunning  = 1 // 运行中
+	kStateFinished = 2 // 已结束
 )
 
 var (
@@ -126,9 +126,19 @@ func (app *Application) Run() (err error) {
 }
 
 func (app *Application) Stop() (err error) {
-	if !app.state.CompareAndSwap(kStateRunning, kStateFinished) {
-		return nil
-	}
+	//if !app.state.CompareAndSwap(kStateRunning, kStateFinished) {
+	//	switch app.state.Load() {
+	//	case kStateIdle:
+	//		return ErrApplicationIdle
+	//	case kStateFinished:
+	//		return ErrApplicationFinished
+	//	default:
+	//  	var ErrApplicationIdle     = errors.New("application is idle")
+	//		return ErrBadApplication
+	//	}
+	//}
+
+	app.state.Store(kStateFinished)
 
 	if app.cancel != nil {
 		app.cancel()
