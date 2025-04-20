@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -37,12 +38,25 @@ func WithStopTimeout(timeout time.Duration) Option {
 	}
 }
 
+const (
+	kStateIdle     = 0
+	kStateRunning  = 1
+	kStateFinished = 2
+)
+
+var (
+	ErrApplicationRunning  = errors.New("applicatoin is running")
+	ErrApplicationFinished = errors.New("application finished")
+	ErrBadApplication      = errors.New("bad application")
+)
+
 type Application struct {
 	ctx    context.Context
 	cancel func()
 
 	stopTimeout time.Duration
 	servers     []Server
+	state       atomic.Int32
 }
 
 func New(opts ...Option) *Application {
@@ -63,6 +77,17 @@ func New(opts ...Option) *Application {
 }
 
 func (app *Application) Run() (err error) {
+	if !app.state.CompareAndSwap(kStateIdle, kStateRunning) {
+		switch app.state.Load() {
+		case kStateRunning:
+			return ErrApplicationRunning
+		case kStateFinished:
+			return ErrApplicationFinished
+		default:
+			return ErrBadApplication
+		}
+	}
+
 	var group, ctx = errgroup.WithContext(app.ctx)
 	var wg = sync.WaitGroup{}
 
@@ -101,6 +126,10 @@ func (app *Application) Run() (err error) {
 }
 
 func (app *Application) Stop() (err error) {
+	if !app.state.CompareAndSwap(kStateRunning, kStateFinished) {
+		return
+	}
+
 	if app.cancel != nil {
 		app.cancel()
 	}
