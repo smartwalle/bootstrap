@@ -38,10 +38,12 @@ func WithStopTimeout(timeout time.Duration) Option {
 	}
 }
 
+type State int32
+
 const (
-	kStateIdle     = 0 // 未运行
-	kStateRunning  = 1 // 运行中
-	kStateFinished = 2 // 已结束
+	StateIdle     State = 0 // 未运行
+	StateRunning  State = 1 // 运行中
+	StateShutdown State = 2 // 已结束
 )
 
 var (
@@ -77,11 +79,11 @@ func New(opts ...Option) *Application {
 }
 
 func (app *Application) Run() (err error) {
-	if !app.state.CompareAndSwap(kStateIdle, kStateRunning) {
-		switch app.state.Load() {
-		case kStateRunning:
+	if !app.state.CompareAndSwap(int32(StateIdle), int32(StateRunning)) {
+		switch State(app.state.Load()) {
+		case StateRunning:
 			return ErrApplicationRunning
-		case kStateFinished:
+		case StateShutdown:
 			return ErrApplicationFinished
 		default:
 			return ErrBadApplication
@@ -125,20 +127,24 @@ func (app *Application) Run() (err error) {
 	return nil
 }
 
+func (app *Application) State() State {
+	return State(app.state.Load())
+}
+
 func (app *Application) Stop() (err error) {
-	//if !app.state.CompareAndSwap(kStateRunning, kStateFinished) {
-	//	switch app.state.Load() {
-	//	case kStateIdle:
+	//if !app.state.CompareAndSwap(StateRunning, StateFinished) {
+	//	switch State(app.state.Load()) {
+	//	case StateIdle:
+	//  	var ErrApplicationIdle     = errors.New("application is idle")
 	//		return ErrApplicationIdle
-	//	case kStateFinished:
+	//	case StateFinished:
 	//		return ErrApplicationFinished
 	//	default:
-	//  	var ErrApplicationIdle     = errors.New("application is idle")
 	//		return ErrBadApplication
 	//	}
 	//}
 
-	app.state.Store(kStateFinished)
+	app.state.Store(int32(StateShutdown))
 
 	if app.cancel != nil {
 		app.cancel()
