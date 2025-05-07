@@ -15,15 +15,6 @@ import (
 
 type Option func(app *Application)
 
-func WithContext(ctx context.Context) Option {
-	return func(app *Application) {
-		if ctx == nil {
-			ctx = context.Background()
-		}
-		app.ctx = ctx
-	}
-}
-
 func WithServers(servers ...Server) Option {
 	return func(app *Application) {
 		if len(servers) > 0 {
@@ -43,7 +34,7 @@ type State int32
 const (
 	StateIdle     State = 0 // 未运行
 	StateRunning  State = 1 // 运行中
-	StateShutdown State = 2 // 已结束
+	StateFinished State = 2 // 已结束
 )
 
 var (
@@ -53,7 +44,6 @@ var (
 )
 
 type Application struct {
-	ctx    context.Context
 	cancel func()
 
 	stopTimeout time.Duration
@@ -63,48 +53,46 @@ type Application struct {
 
 func New(opts ...Option) *Application {
 	var app = &Application{}
-	app.ctx = context.Background()
 	app.stopTimeout = 10 * time.Second
-
+	app.state.Store(int32(StateIdle))
 	for _, opt := range opts {
 		if opt != nil {
 			opt(app)
 		}
 	}
-
-	ctx, cancel := context.WithCancel(app.ctx)
-	app.ctx = ctx
-	app.cancel = cancel
 	return app
 }
 
-func (app *Application) Run() (err error) {
+func (app *Application) Run(ctx context.Context) (err error) {
 	if !app.state.CompareAndSwap(int32(StateIdle), int32(StateRunning)) {
 		switch State(app.state.Load()) {
 		case StateRunning:
 			return ErrApplicationRunning
-		case StateShutdown:
+		case StateFinished:
 			return ErrApplicationFinished
 		default:
 			return ErrBadApplication
 		}
 	}
 
-	var group, ctx = errgroup.WithContext(app.ctx)
+	ctx, cancel := context.WithCancel(ctx)
+	app.cancel = cancel
+
+	group, ctx := errgroup.WithContext(ctx)
 	var wg = sync.WaitGroup{}
 
 	for _, server := range app.servers {
 		var nServer = server
 		group.Go(func() error {
 			<-ctx.Done()
-			stopCtx, cancel := context.WithTimeout(context.WithoutCancel(app.ctx), app.stopTimeout)
-			defer cancel()
+			stopCtx, stopCancel := context.WithTimeout(context.WithoutCancel(ctx), app.stopTimeout)
+			defer stopCancel()
 			return nServer.Stop(stopCtx)
 		})
 		wg.Add(1)
 		group.Go(func() error {
 			wg.Done()
-			return nServer.Start(app.ctx)
+			return nServer.Start(ctx)
 		})
 	}
 
@@ -144,7 +132,7 @@ func (app *Application) Stop() (err error) {
 	//	}
 	//}
 
-	app.state.Store(int32(StateShutdown))
+	app.state.Store(int32(StateFinished))
 
 	if app.cancel != nil {
 		app.cancel()
