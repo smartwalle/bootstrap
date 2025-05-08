@@ -17,6 +17,10 @@ func main() {
 	var httpServer = nhttp.NewServer("127.0.0.1:9090", mux)
 
 	var ctx = NewContext(context.Background(), "这是来自 main 函数的信息")
+
+	//ctx, cancel := context.WithCancel(ctx)
+	//time.AfterFunc(time.Second*3, cancel)
+
 	var app = bootstrap.New(
 		bootstrap.WithContext(ctx),
 		bootstrap.WithServers(&SimpleServer{id: "服务A"}, &SimpleServer{id: "服务B"}),

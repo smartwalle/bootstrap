@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/signal"
 	"sync"
-	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -35,34 +34,18 @@ func WithStopTimeout(timeout time.Duration) Option {
 	}
 }
 
-type State int32
-
-const (
-	StateIdle     State = 0 // 未运行
-	StateRunning  State = 1 // 运行中
-	StateFinished State = 2 // 已结束
-)
-
-var (
-	ErrApplicationRunning  = errors.New("applicatoin is running")
-	ErrApplicationFinished = errors.New("application finished")
-	ErrBadApplication      = errors.New("bad application")
-)
-
 type Application struct {
 	ctx    context.Context
 	cancel func()
 
 	stopTimeout time.Duration
 	servers     []Server
-	state       atomic.Int32
 }
 
 func New(opts ...Option) *Application {
 	var app = &Application{}
 	app.ctx = context.Background()
 	app.stopTimeout = 10 * time.Second
-	app.state.Store(int32(StateIdle))
 	for _, opt := range opts {
 		if opt != nil {
 			opt(app)
@@ -73,17 +56,6 @@ func New(opts ...Option) *Application {
 }
 
 func (app *Application) Run() (err error) {
-	if !app.state.CompareAndSwap(int32(StateIdle), int32(StateRunning)) {
-		switch State(app.state.Load()) {
-		case StateRunning:
-			return ErrApplicationRunning
-		case StateFinished:
-			return ErrApplicationFinished
-		default:
-			return ErrBadApplication
-		}
-	}
-
 	group, ctx := errgroup.WithContext(app.ctx)
 	var wg = sync.WaitGroup{}
 
@@ -119,7 +91,7 @@ func (app *Application) Run() (err error) {
 		case <-ctx.Done():
 			return nil
 		case <-sigs:
-			return app.Stop()
+			return app.Shutdown()
 		}
 	})
 	if err = group.Wait(); err != nil && !errors.Is(err, context.Canceled) {
@@ -128,13 +100,7 @@ func (app *Application) Run() (err error) {
 	return nil
 }
 
-func (app *Application) State() State {
-	return State(app.state.Load())
-}
-
-func (app *Application) Stop() (err error) {
-	app.state.Store(int32(StateFinished))
-
+func (app *Application) Shutdown() (err error) {
 	if app.cancel != nil {
 		app.cancel()
 	}
