@@ -16,13 +16,14 @@ func main() {
 
 	var httpServer = nhttp.NewServer("127.0.0.1:9090", mux)
 
+	var ctx = NewContext(context.Background(), "这是来自 main 函数的信息")
 	var app = bootstrap.New(
+		bootstrap.WithContext(ctx),
 		bootstrap.WithServers(&SimpleServer{id: "服务A"}, &SimpleServer{id: "服务B"}),
 		bootstrap.WithServers(httpServer),
 	)
 
-	var ctx = NewContext(context.Background(), "这是来自 main 函数的信息")
-	fmt.Println(app.Run(ctx))
+	fmt.Println(app.Run())
 }
 
 type SimpleServer struct {

@@ -15,6 +15,12 @@ import (
 
 type Option func(app *Application)
 
+func WithContext(ctx context.Context) Option {
+	return func(app *Application) {
+		app.ctx = ctx
+	}
+}
+
 func WithServers(servers ...Server) Option {
 	return func(app *Application) {
 		if len(servers) > 0 {
@@ -44,6 +50,7 @@ var (
 )
 
 type Application struct {
+	ctx    context.Context
 	cancel func()
 
 	stopTimeout time.Duration
@@ -53,6 +60,7 @@ type Application struct {
 
 func New(opts ...Option) *Application {
 	var app = &Application{}
+	app.ctx = context.Background()
 	app.stopTimeout = 10 * time.Second
 	app.state.Store(int32(StateIdle))
 	for _, opt := range opts {
@@ -60,10 +68,11 @@ func New(opts ...Option) *Application {
 			opt(app)
 		}
 	}
+	app.ctx, app.cancel = context.WithCancel(app.ctx)
 	return app
 }
 
-func (app *Application) Run(ctx context.Context) (err error) {
+func (app *Application) Run() (err error) {
 	if !app.state.CompareAndSwap(int32(StateIdle), int32(StateRunning)) {
 		switch State(app.state.Load()) {
 		case StateRunning:
@@ -75,10 +84,7 @@ func (app *Application) Run(ctx context.Context) (err error) {
 		}
 	}
 
-	ctx, cancel := context.WithCancel(ctx)
-	app.cancel = cancel
-
-	group, ctx := errgroup.WithContext(ctx)
+	group, ctx := errgroup.WithContext(app.ctx)
 	var wg = sync.WaitGroup{}
 
 	for _, server := range app.servers {
@@ -89,10 +95,17 @@ func (app *Application) Run(ctx context.Context) (err error) {
 			defer stopCancel()
 			return nServer.Stop(stopCtx)
 		})
+
 		wg.Add(1)
+
 		group.Go(func() error {
 			wg.Done()
-			return nServer.Start(ctx)
+			select {
+			case <-ctx.Done():
+				return nil
+			default:
+				return nServer.Start(ctx)
+			}
 		})
 	}
 
@@ -120,18 +133,6 @@ func (app *Application) State() State {
 }
 
 func (app *Application) Stop() (err error) {
-	//if !app.state.CompareAndSwap(StateRunning, StateFinished) {
-	//	switch State(app.state.Load()) {
-	//	case StateIdle:
-	//  	var ErrApplicationIdle     = errors.New("application is idle")
-	//		return ErrApplicationIdle
-	//	case StateFinished:
-	//		return ErrApplicationFinished
-	//	default:
-	//		return ErrBadApplication
-	//	}
-	//}
-
 	app.state.Store(int32(StateFinished))
 
 	if app.cancel != nil {
