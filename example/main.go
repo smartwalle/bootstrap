@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/smartwalle/bootstrap"
-	nhttp "github.com/smartwalle/bootstrap/http"
+	"github.com/smartwalle/mx"
+	nhttp "github.com/smartwalle/mx/http"
 	"net/http"
 )
 
@@ -21,10 +21,10 @@ func main() {
 	//ctx, cancel := context.WithCancel(ctx)
 	//time.AfterFunc(time.Second*3, cancel)
 
-	var app = bootstrap.New(
-		bootstrap.WithContext(ctx),
-		bootstrap.WithServers(&SimpleServer{id: "服务A"}, &SimpleServer{id: "服务B"}),
-		bootstrap.WithServers(httpServer),
+	var app = mx.New(
+		mx.WithContext(ctx),
+		mx.WithServers(&SimpleServer{id: "服务A"}, &SimpleServer{id: "服务B"}),
+		mx.WithServers(httpServer),
 	)
 
 	fmt.Println(app.Run())

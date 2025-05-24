@@ -1,4 +1,4 @@
-module github.com/smartwalle/bootstrap
+module github.com/smartwalle/mx
 
 go 1.23.0
 
