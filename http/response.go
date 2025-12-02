@@ -11,13 +11,15 @@ type Response struct {
 	Data    interface{} `json:"data,omitempty"`
 }
 
-func NewResponse(code int, data interface{}) *Response {
+func NewResponse(code int, message string, data interface{}) *Response {
 	var r = &Response{}
 	r.Code = code
+	r.Message = message
 	r.Data = data
 	return r
 }
 
-func (r *Response) Write(w http.ResponseWriter) error {
-	return json.NewEncoder(w).Encode(r)
+func (r *Response) Write(statusCode int, writer http.ResponseWriter) error {
+	writer.WriteHeader(statusCode)
+	return json.NewEncoder(writer).Encode(r)
 }
