@@ -34,12 +34,27 @@ func WithStopTimeout(timeout time.Duration) Option {
 	}
 }
 
+func WithBeforeStart(handler func(context.Context)) Option {
+	return func(app *Application) {
+		app.beforeStart = handler
+	}
+}
+
+func WithAfterStop(handler func(context.Context)) Option {
+	return func(app *Application) {
+		app.afterStop = handler
+	}
+}
+
 type Application struct {
 	ctx    context.Context
 	cancel func()
 
 	stopTimeout time.Duration
 	servers     []Server
+
+	beforeStart func(context.Context)
+	afterStop   func(context.Context)
 }
 
 func New(opts ...Option) *Application {
@@ -58,6 +73,16 @@ func New(opts ...Option) *Application {
 func (app *Application) Run() (err error) {
 	group, ctx := errgroup.WithContext(app.ctx)
 	var wg = sync.WaitGroup{}
+
+	defer func() {
+		if app.afterStop != nil {
+			app.afterStop(context.WithoutCancel(ctx))
+		}
+	}()
+
+	if app.beforeStart != nil {
+		app.beforeStart(context.WithoutCancel(ctx))
+	}
 
 	for _, server := range app.servers {
 		var nServer = server

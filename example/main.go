@@ -11,7 +11,7 @@ import (
 func main() {
 	var mux = http.NewServeMux()
 	mux.HandleFunc("/hello", func(writer http.ResponseWriter, request *http.Request) {
-		nhttp.NewResponse(1, "hello").Write(writer)
+		nhttp.NewResponse(1, "", "hello").Write(http.StatusOK, writer)
 	})
 
 	var httpServer = nhttp.NewServer("127.0.0.1:9090", mux)
@@ -25,6 +25,12 @@ func main() {
 		bootstrap.WithContext(ctx),
 		bootstrap.WithServers(&SimpleServer{id: "服务A"}, &SimpleServer{id: "服务B"}),
 		bootstrap.WithServers(httpServer),
+		bootstrap.WithBeforeStart(func(ctx context.Context) {
+			fmt.Println("before start")
+		}),
+		bootstrap.WithAfterStop(func(ctx context.Context) {
+			fmt.Println("afte stop")
+		}),
 	)
 
 	fmt.Println(app.Run())
