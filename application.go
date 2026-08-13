@@ -5,11 +5,10 @@ import (
 	"errors"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 	"time"
 
-	"golang.org/x/sync/errgroup"
+	"github.com/smartwalle/routine"
 )
 
 type Option func(app *Application)
@@ -71,32 +70,34 @@ func New(opts ...Option) *Application {
 }
 
 func (app *Application) Run() (err error) {
-	group, ctx := errgroup.WithContext(app.ctx)
-	var wg = sync.WaitGroup{}
+	var rPool = routine.New(
+		routine.WithCapacity(int32(len(app.servers)*2)+1),
+		routine.WithMaxWorkers(int32(len(app.servers)*2)+1),
+		routine.WithIdleTimeout(-1),
+	)
+	defer rPool.Close()
+	rGroup, _ := rPool.Group(app.ctx)
 
 	defer func() {
 		if app.afterStop != nil {
-			app.afterStop(context.WithoutCancel(ctx))
+			app.afterStop(context.WithoutCancel(rGroup.Context()))
 		}
 	}()
 
 	if app.beforeStart != nil {
-		app.beforeStart(context.WithoutCancel(ctx))
+		app.beforeStart(context.WithoutCancel(rGroup.Context()))
 	}
 
 	for _, server := range app.servers {
 		var nServer = server
-		group.Go(func() error {
+		rGroup.Go(func(ctx context.Context) error {
 			<-ctx.Done()
 			stopCtx, stopCancel := context.WithTimeout(context.WithoutCancel(ctx), app.stopTimeout)
 			defer stopCancel()
 			return nServer.Stop(stopCtx)
 		})
 
-		wg.Add(1)
-
-		group.Go(func() error {
-			wg.Done()
+		rGroup.Go(func(ctx context.Context) error {
 			select {
 			case <-ctx.Done():
 				return nil
@@ -106,12 +107,10 @@ func (app *Application) Run() (err error) {
 		})
 	}
 
-	wg.Wait()
-
 	var sigs = make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT)
 
-	group.Go(func() error {
+	rGroup.Go(func(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			return nil
@@ -119,9 +118,10 @@ func (app *Application) Run() (err error) {
 			return app.Shutdown()
 		}
 	})
-	if err = group.Wait(); err != nil && !errors.Is(err, context.Canceled) {
+	if err = rGroup.Wait(); err != nil && !errors.Is(err, context.Canceled) {
 		return err
 	}
+
 	return nil
 }
 

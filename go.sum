@@ -1,2 +1,2 @@
-golang.org/x/sync v0.13.0 h1:AauUjRAJ9OSnvULf/ARrrVywoJDy0YS2AwQ98I37610=
-golang.org/x/sync v0.13.0/go.mod h1:1dzgHSNfp02xaA81J2MS99Qcpr2w7fw1gpm99rleRqA=
+github.com/smartwalle/routine v0.0.0-20260813012959-fd802c0d0aa0 h1:01UhMkGW40a/uOfFkONQVQcgmecnqvZAkxxS7xxvGRA=
+github.com/smartwalle/routine v0.0.0-20260813012959-fd802c0d0aa0/go.mod h1:+ZjGuvKz/66z25IzjN0wIBvTN9b+2sf6vn9KFi1T4Zs=

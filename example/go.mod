@@ -1,12 +1,11 @@
 module github.com/smartwalle/bootstrap/example
 
-go 1.23.0
+go 1.19
 
 require (
-	golang.org/x/sync v0.13.0
 	github.com/smartwalle/bootstrap v0.0.0
 )
 
-replace (
-	github.com/smartwalle/bootstrap => ../
-)
+require github.com/smartwalle/routine v0.0.0-20260813012959-fd802c0d0aa0 // indirect
+
+replace github.com/smartwalle/bootstrap => ../

@@ -3,9 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
+
 	"github.com/smartwalle/bootstrap"
 	nhttp "github.com/smartwalle/bootstrap/http"
-	"net/http"
 )
 
 func main() {

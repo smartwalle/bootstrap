@@ -1,5 +1,5 @@
 module github.com/smartwalle/bootstrap
 
-go 1.23.0
+go 1.19
 
-require golang.org/x/sync v0.13.0
+require github.com/smartwalle/routine v0.0.0-20260813012959-fd802c0d0aa0
