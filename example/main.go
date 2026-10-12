@@ -30,7 +30,7 @@ func main() {
 			fmt.Println("before start")
 		}),
 		bootstrap.WithAfterStop(func(ctx context.Context) {
-			fmt.Println("afte stop")
+			fmt.Println("after stop")
 		}),
 	)
 
