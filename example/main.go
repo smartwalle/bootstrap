@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/smartwalle/bootstrap"
-	nhttp "github.com/smartwalle/bootstrap/http"
 )
 
 func main() {
@@ -16,7 +15,7 @@ func main() {
 		NewResponse(1, "", "hello").Write(http.StatusOK, writer)
 	})
 
-	var httpServer = nhttp.NewServer("127.0.0.1:9090", mux)
+	var httpServer = bootstrap.NewHTTPServer("127.0.0.1:9090", mux)
 
 	var ctx = NewContext(context.Background(), "这是来自 main 函数的信息")
 

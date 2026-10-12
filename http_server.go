@@ -1,4 +1,4 @@
-package http
+package bootstrap
 
 import (
 	"context"
@@ -8,13 +8,13 @@ import (
 	"net/http"
 )
 
-type Server struct {
+type HTTPServer struct {
 	*http.Server
 	Network string
 }
 
-func NewServer(addr string, handler http.Handler) *Server {
-	var s = &Server{}
+func NewHTTPServer(addr string, handler http.Handler) *HTTPServer {
+	var s = &HTTPServer{}
 	s.Server = &http.Server{
 		Addr:    addr,
 		Handler: handler,
@@ -23,11 +23,11 @@ func NewServer(addr string, handler http.Handler) *Server {
 	return s
 }
 
-func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+func (s *HTTPServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	s.Handler.ServeHTTP(w, req)
 }
 
-func (s *Server) Start(ctx context.Context) error {
+func (s *HTTPServer) Start(ctx context.Context) error {
 	listener, err := net.Listen(s.Network, s.Addr)
 	if err != nil {
 		return err
@@ -50,6 +50,6 @@ func (s *Server) Start(ctx context.Context) error {
 	return nil
 }
 
-func (s *Server) Stop(ctx context.Context) error {
+func (s *HTTPServer) Stop(ctx context.Context) error {
 	return s.Server.Shutdown(ctx)
 }
