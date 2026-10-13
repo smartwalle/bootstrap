@@ -33,13 +33,13 @@ func WithStopTimeout(timeout time.Duration) Option {
 	}
 }
 
-func WithBeforeStart(handler func(context.Context)) Option {
+func WithBeforeStart(handler func(ctx context.Context)) Option {
 	return func(app *Application) {
 		app.beforeStart = handler
 	}
 }
 
-func WithAfterStop(handler func(context.Context)) Option {
+func WithAfterStop(handler func(ctx context.Context)) Option {
 	return func(app *Application) {
 		app.afterStop = handler
 	}
