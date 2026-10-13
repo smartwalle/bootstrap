@@ -4,18 +4,19 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
+	stdhttp "net/http"
 
 	"github.com/smartwalle/bootstrap"
+	"github.com/smartwalle/bootstrap/http"
 )
 
 func main() {
-	var mux = http.NewServeMux()
-	mux.HandleFunc("/hello", func(writer http.ResponseWriter, request *http.Request) {
-		NewResponse(1, "", "hello").Write(http.StatusOK, writer)
+	var mux = stdhttp.NewServeMux()
+	mux.HandleFunc("/hello", func(writer stdhttp.ResponseWriter, request *stdhttp.Request) {
+		NewResponse(1, "", "hello").Write(stdhttp.StatusOK, writer)
 	})
 
-	var httpServer = bootstrap.NewHTTPServer("127.0.0.1:9090", mux)
+	var httpServer = http.NewServer("127.0.0.1:9090", mux)
 
 	var ctx = NewContext(context.Background(), "这是来自 main 函数的信息")
 
@@ -63,12 +64,12 @@ func FromContext(ctx context.Context) string {
 }
 
 type Response struct {
-	Code    int         `json:"code"`
-	Message string      `json:"message"`
-	Data    interface{} `json:"data,omitempty"`
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+	Data    any    `json:"data,omitempty"`
 }
 
-func NewResponse(code int, message string, data interface{}) *Response {
+func NewResponse(code int, message string, data any) *Response {
 	var r = &Response{}
 	r.Code = code
 	r.Message = message
@@ -76,7 +77,7 @@ func NewResponse(code int, message string, data interface{}) *Response {
 	return r
 }
 
-func (r *Response) Write(statusCode int, writer http.ResponseWriter) error {
+func (r *Response) Write(statusCode int, writer stdhttp.ResponseWriter) error {
 	writer.WriteHeader(statusCode)
 	return json.NewEncoder(writer).Encode(r)
 }
