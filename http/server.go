@@ -39,7 +39,7 @@ func (s *Server) Start(ctx context.Context) error {
 
 	if s.BaseContext == nil {
 		s.BaseContext = func(listener net.Listener) context.Context {
-			return ctx
+			return context.WithoutCancel(ctx)
 		}
 	}
 
