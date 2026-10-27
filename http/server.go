@@ -4,13 +4,14 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"fmt"
+	"log"
 	"net"
 	"net/http"
 )
 
 type Server struct {
 	*http.Server
-	Network string
 }
 
 func NewServer(addr string, handler http.Handler) *Server {
@@ -19,7 +20,6 @@ func NewServer(addr string, handler http.Handler) *Server {
 		Addr:    addr,
 		Handler: handler,
 	}
-	s.Network = "tcp"
 	return s
 }
 
@@ -28,9 +28,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 func (s *Server) Start(ctx context.Context) error {
-	listener, err := net.Listen(s.Network, s.Addr)
+	listener, err := net.Listen("tcp", s.Addr)
 	if err != nil {
-		return err
+		log.Printf("HTTP 服务监听失败: %+v\n", err)
+		return fmt.Errorf("listen on %s: %w", s.Addr, err)
 	}
 
 	if s.TLSConfig != nil {
@@ -43,13 +44,21 @@ func (s *Server) Start(ctx context.Context) error {
 		}
 	}
 
+	log.Printf("HTTP 服务开始监听: %s\n", listener.Addr().String())
 	if err = s.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		return err
+		log.Printf("HTTP 服务运行失败: %+v\n", err)
+		return fmt.Errorf("serve http: %w", err)
 	}
 
 	return nil
 }
 
 func (s *Server) Stop(ctx context.Context) error {
-	return s.Server.Shutdown(ctx)
+	log.Println("HTTP 服务开始关闭")
+	if err := s.Server.Shutdown(ctx); err != nil {
+		log.Printf("HTTP 服务关闭失败: %+v\n", err)
+		return fmt.Errorf("shutdown http server: %w", err)
+	}
+	log.Println("HTTP 服务关闭完成")
+	return nil
 }
