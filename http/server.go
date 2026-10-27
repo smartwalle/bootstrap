@@ -44,7 +44,7 @@ func (s *Server) Start(ctx context.Context) error {
 		}
 	}
 
-	log.Printf("HTTP 服务开始监听: %s\n", listener.Addr().String())
+	log.Printf("HTTP 服务开始运行: %s\n", listener.Addr().String())
 	if err = s.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Printf("HTTP 服务运行失败: %+v\n", err)
 		return fmt.Errorf("serve http: %w", err)
